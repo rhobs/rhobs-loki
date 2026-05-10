@@ -1,0 +1,33 @@
+goos: darwin
+goarch: arm64
+pkg: github.com/grafana/loki/v3/pkg/loghttp/push
+cpu: Apple M1 Pro
+                                                       │     loki     │                otlp                 │
+                                                       │    sec/op    │   sec/op     vs base                │
+Ingestion/format=json/sm=false/streams=1/lines=10-10      10.27µ ± 2%   24.29µ ± 0%  +136.60% (p=0.002 n=6)
+Ingestion/format=json/sm=false/streams=10/lines=100-10    684.5µ ± 0%   751.6µ ± 0%    +9.81% (p=0.002 n=6)
+Ingestion/format=json/sm=false/streams=50/lines=200-10    6.353m ± 0%   6.877m ± 1%    +8.25% (p=0.002 n=6)
+Ingestion/format=json/sm=true/streams=1/lines=10-10       16.95µ ± 0%   26.24µ ± 0%   +54.79% (p=0.002 n=6)
+Ingestion/format=json/sm=true/streams=10/lines=100-10    1404.4µ ± 0%   762.9µ ± 0%   -45.67% (p=0.002 n=6)
+Ingestion/format=json/sm=true/streams=50/lines=200-10    12.679m ± 0%   6.697m ± 0%   -47.18% (p=0.002 n=6)
+geomean                                                   487.8µ        506.3µ         +3.78%
+
+                                                       │     loki     │                 otlp                  │
+                                                       │     B/op     │     B/op       vs base                │
+Ingestion/format=json/sm=false/streams=1/lines=10-10     9.293Ki ± 0%   61.818Ki ± 0%  +565.21% (p=0.002 n=6)
+Ingestion/format=json/sm=false/streams=10/lines=100-10   807.5Ki ± 0%   1109.0Ki ± 0%   +37.35% (p=0.002 n=6)
+Ingestion/format=json/sm=false/streams=50/lines=200-10   7.556Mi ± 0%   10.209Mi ± 0%   +35.11% (p=0.002 n=6)
+Ingestion/format=json/sm=true/streams=1/lines=10-10      13.72Ki ± 0%    62.81Ki ± 0%  +357.65% (p=0.002 n=6)
+Ingestion/format=json/sm=true/streams=10/lines=100-10    1.467Mi ± 0%    1.092Mi ± 0%   -25.53% (p=0.002 n=6)
+Ingestion/format=json/sm=true/streams=50/lines=200-10    13.96Mi ± 0%    10.26Mi ± 0%   -26.50% (p=0.002 n=6)
+geomean                                                  507.6Ki         899.3Ki        +77.16%
+
+                                                       │    loki     │                 otlp                 │
+                                                       │  allocs/op  │  allocs/op    vs base                │
+Ingestion/format=json/sm=false/streams=1/lines=10-10      68.00 ± 0%    204.00 ± 0%  +200.00% (p=0.002 n=6)
+Ingestion/format=json/sm=false/streams=10/lines=100-10   1.865k ± 0%   10.484k ± 0%  +462.14% (p=0.002 n=6)
+Ingestion/format=json/sm=false/streams=50/lines=200-10   16.99k ± 0%   102.07k ± 0%  +500.70% (p=0.002 n=6)
+Ingestion/format=json/sm=true/streams=1/lines=10-10       184.0 ± 0%     231.0 ± 0%   +25.54% (p=0.002 n=6)
+Ingestion/format=json/sm=true/streams=10/lines=100-10    13.93k ± 0%    10.75k ± 0%   -22.86% (p=0.002 n=6)
+Ingestion/format=json/sm=true/streams=50/lines=200-10    137.3k ± 0%    103.4k ± 0%   -24.72% (p=0.002 n=6)
+geomean                                                  3.020k         6.186k       +104.83%
