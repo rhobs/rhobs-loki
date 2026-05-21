@@ -113,6 +113,7 @@ func TestGetMutateFunc_MutateServiceSpec(t *testing.T) {
 				"select": "that",
 				"and":    "other",
 			},
+			TrafficDistribution: ptr.To(corev1.ServiceTrafficDistributionPreferClose),
 		},
 	}
 
@@ -123,6 +124,7 @@ func TestGetMutateFunc_MutateServiceSpec(t *testing.T) {
 	// Ensure partial mutation applied
 	require.ElementsMatch(t, got.Spec.Ports, want.Spec.Ports)
 	require.Exactly(t, got.Spec.Selector, want.Spec.Selector)
+	require.Exactly(t, got.Spec.TrafficDistribution, want.Spec.TrafficDistribution)
 
 	// Ensure not mutated
 	require.Equal(t, got.Spec.ClusterIP, "none")
