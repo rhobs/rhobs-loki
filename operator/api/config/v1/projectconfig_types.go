@@ -84,6 +84,16 @@ type FeatureGates struct {
 	// suffix `-ca-bundle`, e.g. `lokistack-dev-ca-bundle` and the following data:
 	// - `service-ca.crt`: The CA signing the service certificate in `tls.crt`.
 	GRPCEncryption bool `json:"grpcEncryption,omitempty"`
+
+	// GRPCCompression can be used to enable compression on the gRPC links between the Loki components.
+	// There are three valid values:
+	//
+	//  - "" (default) - no compression
+	//  - "gzip"
+	//  - "snappy"
+	//
+	GRPCCompression string `json:"grpcCompression,omitempty"`
+
 	// BuiltInCertManagement enables the built-in facility for generating and rotating
 	// TLS client and serving certificates for all LokiStack services and internal clients except
 	// for the lokistack-gateway, In detail all internal Loki HTTP and GRPC communication is lifted

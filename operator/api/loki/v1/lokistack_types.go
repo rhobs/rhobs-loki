@@ -1126,6 +1126,13 @@ type LokiStackSpec struct {
 	// +operator-sdk:csv:customresourcedefinitions:type=spec,xDescriptors={"urn:alm:descriptor:com.tectonic.ui:select:Managed","urn:alm:descriptor:com.tectonic.ui:select:Unmanaged"},displayName="Management State"
 	ManagementState ManagementStateType `json:"managementState,omitempty"`
 
+	// DebugOptions contains settings that are not present on the upstream operator version.
+	//
+	// +optional
+	// +kubebuilder:validation:Optional
+	// +operator-sdk:csv:customresourcedefinitions:type=spec,xDescriptors="urn:alm:descriptor:com.tectonic.ui:advanced",displayName="Debug Options"
+	DebugOptions *DebugOptionsSpec `json:"debugOptions,omitempty"`
+
 	// Size defines one of the support Loki deployment scale out sizes.
 	//
 	// +required
@@ -1213,6 +1220,17 @@ type LokiStackSpec struct {
 	// +kubebuilder:validation:Optional
 	// +operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Network Policies"
 	NetworkPolicies *NetworkPoliciesSpec `json:"networkPolicies,omitempty"`
+}
+
+type DebugOptionsSpec struct {
+	// GRPCCompression can be used to enable compression on the gRPC links between the Loki components.
+	// There are three valid values:
+	//
+	//  - "" (default) - no compression
+	//  - "gzip"
+	//  - "snappy"
+	//
+	GRPCCompression string `json:"grpcCompression,omitempty"`
 }
 
 type ReplicationSpec struct {

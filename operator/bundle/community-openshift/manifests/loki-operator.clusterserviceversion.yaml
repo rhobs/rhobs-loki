@@ -152,7 +152,7 @@ metadata:
     categories: OpenShift Optional, Logging & Tracing, Observability
     certified: "false"
     containerImage: docker.io/grafana/loki-operator:0.10.1
-    createdAt: "2026-04-23T11:43:22Z"
+    createdAt: "2026-05-27T17:32:31Z"
     description: The Community Loki Operator provides Kubernetes native deployment
       and management of Loki and related logging components.
     features.operators.openshift.io/disconnected: "true"
@@ -268,6 +268,12 @@ spec:
         name: ""
         version: v1
       specDescriptors:
+      - description: DebugOptions contains settings that are not present on the upstream
+          operator version.
+        displayName: Debug Options
+        path: debugOptions
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:advanced
       - description: HashRing defines the spec for the distributed hash ring configuration.
         displayName: Hash Ring
         path: hashRing
