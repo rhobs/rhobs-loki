@@ -60,6 +60,20 @@ spec:
           spec:
             description: LokiStack CR spec field.
             properties:
+              debugOptions:
+                description: DebugOptions contains settings that are not present on
+                  the upstream operator version.
+                properties:
+                  grpcCompression:
+                    description: |-
+                      GRPCCompression can be used to enable compression on the gRPC links between the Loki components.
+                      There are three valid values:
+
+                       - "" (default) - no compression
+                       - "gzip"
+                       - "snappy"
+                    type: string
+                type: object
               hashRing:
                 description: HashRing defines the spec for the distributed hash ring
                   configuration.

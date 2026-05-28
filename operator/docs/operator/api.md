@@ -1146,6 +1146,40 @@ a secret. This mode is only supported for certain object storage types in certai
 </tr></tbody>
 </table>
 
+## DebugOptionsSpec { #loki-grafana-com-v1-DebugOptionsSpec }
+<p>
+(<em>Appears on:</em><a href="#loki-grafana-com-v1-LokiStackSpec">LokiStackSpec</a>)
+</p>
+<div>
+</div>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>grpcCompression</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<p>GRPCCompression can be used to enable compression on the gRPC links between the Loki components.
+There are three valid values:</p>
+<ul>
+<li>&rdquo;&rdquo; (default) - no compression</li>
+<li>&ldquo;gzip&rdquo;</li>
+<li>&ldquo;snappy&rdquo;</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+
 ## GatewaySpec { #loki-grafana-com-v1-GatewaySpec }
 <p>
 (<em>Appears on:</em><a href="#loki-grafana-com-v1-TenantsSpec">TenantsSpec</a>)
@@ -2014,6 +2048,20 @@ ManagementStateType
 <em>(Optional)</em>
 <p>ManagementState defines if the CR should be managed by the operator or not.
 Default is managed.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>debugOptions</code><br/>
+<em>
+<a href="#loki-grafana-com-v1-DebugOptionsSpec">
+DebugOptionsSpec
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>DebugOptions contains settings that are not present on the upstream operator version.</p>
 </td>
 </tr>
 <tr>
