@@ -235,6 +235,7 @@ func mutatePrometheusRule(existing, desired *monitoringv1.PrometheusRule) {
 func mutateService(existing, desired *corev1.Service) {
 	existing.Spec.Ports = desired.Spec.Ports
 	existing.Spec.Selector = desired.Spec.Selector
+	existing.Spec.TrafficDistribution = desired.Spec.TrafficDistribution
 }
 
 func mutateDeployment(existing, desired *appsv1.Deployment) {

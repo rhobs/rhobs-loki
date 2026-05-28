@@ -217,7 +217,8 @@ func NewDistributorHTTPService(opts Options) *corev1.Service {
 					TargetPort: intstr.IntOrString{IntVal: httpPort},
 				},
 			},
-			Selector: labels,
+			Selector:            labels,
+			TrafficDistribution: ptr.To(corev1.ServiceTrafficDistributionPreferClose),
 		},
 	}
 }
