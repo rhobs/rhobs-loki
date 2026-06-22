@@ -1,7 +1,6 @@
 package manifests
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -110,9 +109,10 @@ func TestBuildIngester_PodDisruptionBudget(t *testing.T) {
 		Namespace: "efgh",
 		Gates:     v1.FeatureGates{},
 		Stack: lokiv1.LokiStackSpec{
+			Size: lokiv1.SizeOneXExtraSmall,
 			Template: &lokiv1.LokiTemplateSpec{
 				Ingester: &lokiv1.LokiComponentSpec{
-					Replicas: 3,
+					Replicas: 2,
 				},
 			},
 			Tenants: &lokiv1.TenantsSpec{
@@ -128,27 +128,9 @@ func TestBuildIngester_PodDisruptionBudget(t *testing.T) {
 	require.NotNil(t, pdb)
 	require.Equal(t, "abcd-ingester", pdb.Name)
 	require.Equal(t, "efgh", pdb.Namespace)
-	require.NotNil(t, pdb.Spec.MaxUnavailable)
+	require.NotNil(t, pdb.Spec.MaxUnavailable.IntVal)
 	require.Equal(t, int32(1), pdb.Spec.MaxUnavailable.IntVal)
 	require.EqualValues(t, ComponentLabels(LabelIngesterComponent, opts.Name), pdb.Spec.Selector.MatchLabels)
-}
-
-func TestNewIngesterStatefulSet_HasTokensFileArg(t *testing.T) {
-	ss := NewIngesterStatefulSet(Options{
-		Name:      "abcd",
-		Namespace: "efgh",
-		Stack: lokiv1.LokiStackSpec{
-			StorageClassName: "standard",
-			Template: &lokiv1.LokiTemplateSpec{
-				Ingester: &lokiv1.LokiComponentSpec{
-					Replicas: 1,
-				},
-			},
-		},
-	})
-
-	container := ss.Spec.Template.Spec.Containers[0]
-	require.Contains(t, container.Args, fmt.Sprintf("-ingester.tokens-file-path=%s", ingesterTokensFilePath))
 }
 
 func TestNewIngesterStatefulSet_TopologySpreadConstraints(t *testing.T) {

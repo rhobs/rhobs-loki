@@ -237,7 +237,6 @@ func configureDistributorGRPCServicePKI(deployment *appsv1.Deployment, opts Opti
 // Distributor pods.
 func newDistributorPodDisruptionBudget(opts Options) *policyv1.PodDisruptionBudget {
 	l := ComponentLabels(LabelDistributorComponent, opts.Name)
-	maxUnavailable := intstr.FromInt32(1)
 	return &policyv1.PodDisruptionBudget{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "PodDisruptionBudget",
@@ -252,7 +251,7 @@ func newDistributorPodDisruptionBudget(opts Options) *policyv1.PodDisruptionBudg
 			Selector: &metav1.LabelSelector{
 				MatchLabels: l,
 			},
-			MaxUnavailable: &maxUnavailable,
+			MaxUnavailable: ptr.To(intstr.FromInt32(1)),
 		},
 	}
 }

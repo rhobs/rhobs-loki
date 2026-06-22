@@ -2,7 +2,7 @@
 title: Migrate to TSDB
 menuTitle: Migrate to TSDB
 description: Migration guide for moving from any of the older indexes to TSDB
-weight: 300
+weight: 200
 keywords:
   - migrate
   - tsdb
@@ -11,7 +11,7 @@ keywords:
 # Migrate to TSDB
 
 [TSDB](../../../operations/storage/tsdb/) is the recommended index type for Loki and is where the current development lies.
-If you are running Loki with [boltb-shipper](../../../operations/storage/boltdb-shipper/) or any of the [legacy index types](https://grafana.com/docs/loki/<LOKI_VERSION>/configure/storage/#index-storage) that have been deprecated,
+If you are running Loki with [boltdb-shipper](../../../operations/storage/boltdb-shipper/) or any of the [legacy index types](https://grafana.com/docs/loki/<LOKI_VERSION>/configure/storage/#index-storage) that have been deprecated,
 we strongly recommend migrating to TSDB.
 
 

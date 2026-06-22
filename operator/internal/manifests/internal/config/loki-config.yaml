@@ -154,6 +154,7 @@ ingester:
     final_sleep: 0s
     join_after: 30s
     num_tokens: 512
+    tokens_file_path: {{ .StorageDirectory }}/ring-tokens
     {{- if .GossipRing.EnableIPv6 }}
     enable_inet6: true
     {{- end}}
@@ -353,6 +354,10 @@ schema_config:
       {{- end}}
     {{- end }}
 {{ if .Ruler.Enabled }}
+ruler_storage:
+  backend: local
+  local:
+    directory: {{ .Ruler.RulesStorageDirectory }}
 ruler:
   enable_api: true
   enable_sharding: true
@@ -546,10 +551,6 @@ ruler:
     min_age: 5m
     max_age: 4h
   rule_path: {{ .StorageDirectory }}
-  storage:
-    type: local
-    local:
-      directory: {{ .Ruler.RulesStorageDirectory }}
   ring:
     kvstore:
       store: memberlist

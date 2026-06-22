@@ -33,13 +33,18 @@ import (
 	"github.com/grafana/loki/v3/pkg/dataobj/metastore/multitenancy"
 	"github.com/grafana/loki/v3/pkg/dataobj/sections/indexpointers"
 	"github.com/grafana/loki/v3/pkg/dataobj/sections/pointers"
+	"github.com/grafana/loki/v3/pkg/dataobj/sections/postings"
 	"github.com/grafana/loki/v3/pkg/dataobj/sections/streams"
 	utillog "github.com/grafana/loki/v3/pkg/util/log"
 	"github.com/grafana/loki/v3/pkg/xcap"
 )
 
 const (
-	metastoreWindowSize = 12 * time.Hour
+	// MetastoreWindowSize is the duration covered by a single Table of
+	// Contents file in the metastore. ToC files are aligned to multiples of
+	// this duration. Exported so external packages (e.g. the dataobj
+	// compactor) can iterate over the same time windows used internally.
+	MetastoreWindowSize = 12 * time.Hour
 
 	// TocPrefix is the prefix under which ToC files are stored in the object storage.
 	TocPrefix = "tocs/"
@@ -49,10 +54,11 @@ var tracer = otel.Tracer("pkg/dataobj/metastore")
 
 // ObjectMetastore is a metastore that stores data objects in object storage.
 type ObjectMetastore struct {
-	bucket      objstore.Bucket
-	parallelism int
-	logger      log.Logger
-	metrics     *ObjectMetastoreMetrics
+	readPostingsSections bool
+	bucket               objstore.Bucket
+	parallelism          int
+	logger               log.Logger
+	metrics              *ObjectMetastoreMetrics
 }
 
 // SectionKey is a unique identifier for a section of a data object.
@@ -121,22 +127,27 @@ func (d *DataobjSectionDescriptor) Merge(pointer pointers.SectionPointer, lbls [
 	d.AmbiguousPredicatesByStream[pointer.StreamIDRef] = curLbls
 }
 
-// Table of Content files are stored in well-known locations that can be computed from a known time.
-func tableOfContentsPath(window time.Time) string {
+// TableOfContentsPath returns the object-storage path of the ToC file that
+// covers the given window-aligned time. The path layout is part of the
+// metastore's on-disk contract; callers must align window to MetastoreWindowSize.
+func TableOfContentsPath(window time.Time) string {
 	return fmt.Sprintf("%s%s.toc", TocPrefix, strings.ReplaceAll(window.Format(time.RFC3339), ":", "_"))
 }
 
-func iterTableOfContentsPaths(start, end time.Time) iter.Seq2[string, multitenancy.TimeRange] {
-	minTocWindow := start.Truncate(metastoreWindowSize).UTC()
-	maxTocWindow := end.Truncate(metastoreWindowSize).UTC()
+// IterTableOfContentsPaths returns a sequence of (path, time-range) pairs
+// covering every ToC window that overlaps [start, end]. start and end may
+// be unaligned; the iterator truncates them to MetastoreWindowSize boundaries.
+func IterTableOfContentsPaths(start, end time.Time) iter.Seq2[string, multitenancy.TimeRange] {
+	minTocWindow := start.Truncate(MetastoreWindowSize).UTC()
+	maxTocWindow := end.Truncate(MetastoreWindowSize).UTC()
 
 	return func(yield func(t string, timeRange multitenancy.TimeRange) bool) {
-		for tocWindow := minTocWindow; !tocWindow.After(maxTocWindow); tocWindow = tocWindow.Add(metastoreWindowSize) {
+		for tocWindow := minTocWindow; !tocWindow.After(maxTocWindow); tocWindow = tocWindow.Add(MetastoreWindowSize) {
 			tocTimeRange := multitenancy.TimeRange{
 				MinTime: tocWindow,
-				MaxTime: tocWindow.Add(metastoreWindowSize),
+				MaxTime: tocWindow.Add(MetastoreWindowSize),
 			}
-			if !yield(tableOfContentsPath(tocWindow), tocTimeRange) {
+			if !yield(TableOfContentsPath(tocWindow), tocTimeRange) {
 				return
 			}
 		}
@@ -154,10 +165,11 @@ func NewObjectMetastore(b objstore.Bucket, cfg Config, logger log.Logger, metric
 	b = bucket.NewXCapBucket(b)
 
 	store := &ObjectMetastore{
-		bucket:      b,
-		parallelism: 64,
-		logger:      logger,
-		metrics:     metrics,
+		readPostingsSections: cfg.ReadPostingsSections,
+		bucket:               b,
+		parallelism:          64,
+		logger:               logger,
+		metrics:              metrics,
 	}
 
 	return store
@@ -187,7 +199,7 @@ func (m *ObjectMetastore) streams(ctx context.Context, start, end time.Time, mat
 	var (
 		tablePaths []string
 	)
-	for path := range iterTableOfContentsPaths(start, end) {
+	for path := range IterTableOfContentsPaths(start, end) {
 		tablePaths = append(tablePaths, path)
 	}
 
@@ -215,7 +227,7 @@ func (m *ObjectMetastore) DataObjects(ctx context.Context, start, end time.Time,
 
 	// Get all metastore paths for the time range
 	var tablePaths []string
-	for path := range iterTableOfContentsPaths(start, end) {
+	for path := range IterTableOfContentsPaths(start, end) {
 		tablePaths = append(tablePaths, path)
 	}
 
@@ -622,6 +634,27 @@ func (m *ObjectMetastore) IndexSectionsReader(ctx context.Context, req IndexSect
 		return IndexSectionsReaderResponse{}, fmt.Errorf("prepare obj %s: %w", req.IndexPath, err)
 	}
 
+	if m.readPostingsSections {
+		hasPostings, err := hasPostingsSection(ctx, idxObj)
+		if err != nil {
+			level.Error(utillog.WithContext(ctx, m.logger)).Log("msg", "failed to check for postings section", "path", req.IndexPath, "err", err)
+			return IndexSectionsReaderResponse{}, err
+		}
+		// Index objects written before postings still read from streams sections
+		if hasPostings {
+			reader := newPostingsIndexSectionsReader(
+				m.logger,
+				idxObj,
+				req.SectionsRequest.Start,
+				req.SectionsRequest.End,
+				req.SectionsRequest.Matchers,
+				req.SectionsRequest.Predicates,
+				req.BatchSize,
+			)
+			return IndexSectionsReaderResponse{Reader: reader}, nil
+		}
+	}
+
 	reader := newIndexSectionsReader(
 		m.logger,
 		idxObj,
@@ -635,6 +668,21 @@ func (m *ObjectMetastore) IndexSectionsReader(ctx context.Context, req IndexSect
 	return IndexSectionsReaderResponse{Reader: reader}, nil
 }
 
+// hasPostingsSection reports whether obj contains a postings section for the tenant
+func hasPostingsSection(ctx context.Context, obj *dataobj.Object) (bool, error) {
+	tenant, err := user.ExtractOrgID(ctx)
+	if err != nil {
+		return false, fmt.Errorf("extracting org ID: %w", err)
+	}
+
+	for _, section := range obj.Sections() {
+		if section.Tenant == tenant && postings.CheckSection(section) {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
 func (m *ObjectMetastore) GetIndexes(ctx context.Context, req GetIndexesRequest) (GetIndexesResponse, error) {
 	ctx, span := xcap.StartSpan(ctx, tracer, "metastore.GetIndexes")
 	defer span.End()
@@ -642,9 +690,10 @@ func (m *ObjectMetastore) GetIndexes(ctx context.Context, req GetIndexesRequest)
 	resp := GetIndexesResponse{}
 
 	// Get all metastore paths for the time range
-	for path := range iterTableOfContentsPaths(req.Start, req.End) {
+	for path := range IterTableOfContentsPaths(req.Start, req.End) {
 		resp.TableOfContentsPaths = append(resp.TableOfContentsPaths, path)
 	}
+	span.Record(StatMetastoreTocTables.Observe(int64(len(resp.TableOfContentsPaths))))
 
 	// Return early if no toc files are found
 	if len(resp.TableOfContentsPaths) == 0 {
@@ -705,9 +754,6 @@ func (m *ObjectMetastore) CollectSections(ctx context.Context, req CollectSectio
 	for _, s := range objectSectionDescriptors {
 		sections = append(sections, s)
 	}
-
-	region := xcap.RegionFromContext(ctx)
-	region.Record(xcap.StatMetastoreSectionsResolved.Observe(int64(len(sections))))
 
 	return CollectSectionsResponse{
 		SectionsResponse: SectionsResponse{

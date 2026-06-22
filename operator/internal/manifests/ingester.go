@@ -103,7 +103,6 @@ func NewIngesterStatefulSet(opts Options) *appsv1.StatefulSet {
 					fmt.Sprintf("-config.file=%s", path.Join(config.LokiConfigMountDir, config.LokiConfigFileName)),
 					fmt.Sprintf("-runtime-config.file=%s", path.Join(config.LokiConfigMountDir, config.LokiRuntimeConfigFileName)),
 					"-config.expand-env=true",
-					fmt.Sprintf("-ingester.tokens-file-path=%s", ingesterTokensFilePath),
 				},
 				ReadinessProbe: lokiReadinessProbe(),
 				LivenessProbe:  lokiLivenessProbe(),
@@ -291,8 +290,6 @@ func configureIngesterGRPCServicePKI(sts *appsv1.StatefulSet, opts Options) erro
 // Ingester pods.
 func newIngesterPodDisruptionBudget(opts Options) *policyv1.PodDisruptionBudget {
 	l := ComponentLabels(LabelIngesterComponent, opts.Name)
-	maxUnavailable := intstr.FromInt32(1)
-
 	return &policyv1.PodDisruptionBudget{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "PodDisruptionBudget",
@@ -307,7 +304,7 @@ func newIngesterPodDisruptionBudget(opts Options) *policyv1.PodDisruptionBudget 
 			Selector: &metav1.LabelSelector{
 				MatchLabels: l,
 			},
-			MaxUnavailable: &maxUnavailable,
+			MaxUnavailable: ptr.To(intstr.FromInt32(1)),
 		},
 	}
 }

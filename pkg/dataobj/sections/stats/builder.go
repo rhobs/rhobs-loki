@@ -1,55 +1,37 @@
 package stats
 
 import (
-	"context"
+	"cmp"
 	"fmt"
-	"sort"
+	"slices"
 	"strings"
 
+	"github.com/prometheus/client_golang/prometheus"
+
 	"github.com/grafana/loki/v3/pkg/dataobj"
+	"github.com/grafana/loki/v3/pkg/dataobj/sections/internal/columnar"
 )
 
-// columnName constants for each column in the stats section.
-const (
-	colObjectPath       = "object_path"
-	colSectionIndex     = "section_index"
-	colSortSchema       = "sort_schema"
-	colMinTimestamp     = "min_timestamp"
-	colMaxTimestamp     = "max_timestamp"
-	colRowCount         = "row_count"
-	colUncompressedSize = "uncompressed_size"
-)
-
-// Builder accumulates [Stat] rows and encodes them into columnar arrays.
+// Builder accumulates [Stat] rows and encodes them into a section via a
+// [dataobj.SectionWriter].
 //
 // Flush writes are done via [Builder.Flush], which encodes all accumulated
-// rows into a set of [Section] values that can be read back via a [Reader].
-//
-// TODO(twhitney): Implement the [dataobj.SectionBuilder] interface by changing
-// Flush to accept a [dataobj.SectionWriter] and encode via [columnar.Encoder].
-// This should be done alongside the postings builder when on-disk serialization lands.
+// rows and writes them to the provided [dataobj.SectionWriter].
 type Builder struct {
-	tenant            string
-	targetSectionSize int
-	encode            SectionEncoder
+	metrics *Metrics
+	tenant  string
+	encode  SectionEncoder
 
 	rows []Stat
 }
 
-// defaultTargetSectionSize is used when no target section size is provided
-// (e.g., in tests). Production callers always pass TargetSectionSize from config.
-const defaultTargetSectionSize = 256 * 1024 * 1024 // 256 MiB
-
-// NewBuilder creates a new Builder. targetSectionSize controls when accumulated
-// data is large enough to split into multiple sections; use 0 for the default.
-// encode is the SectionEncoder to use for encoding rows.
-func NewBuilder(targetSectionSize int, encode SectionEncoder) *Builder {
-	if targetSectionSize <= 0 {
-		targetSectionSize = defaultTargetSectionSize
-	}
+// NewBuilder creates a new Builder.
+// encode is the [SectionEncoder] to use for encoding rows.
+// metrics may be nil to disable instrumentation.
+func NewBuilder(metrics *Metrics, encode SectionEncoder) *Builder {
 	return &Builder{
-		targetSectionSize: targetSectionSize,
-		encode:            encode,
+		metrics: metrics,
+		encode:  encode,
 	}
 }
 
@@ -89,79 +71,59 @@ func (b *Builder) Reset() {
 	b.rows = b.rows[:0]
 }
 
-// Flush sorts the accumulated rows by label values in sort schema order, then
-// by MinTimestamp. It encodes them column-by-column into [Section] values,
-// and returns one or more [Section] values. When the accumulated row size
-// exceeds the configured targetSectionSize, the rows are split across multiple
-// sections.
+// Compare reports the canonical sort order of two [Stat] rows. It returns a
+// negative value if a sorts before b, a positive value if a sorts after b, and
+// zero if they share the full key.
 //
-// After a successful flush, the builder is reset.
-func (b *Builder) Flush(ctx context.Context) ([]Section, error) {
-	if len(b.rows) == 0 {
-		return nil, nil
+// Both rows must share the same SortSchema.
+func Compare(a, b Stat) int {
+	// Iterates the SortSchema with [strings.SplitSeq] so the function does not
+	// allocate per comparison; the flush sort invokes it O(n log n) times.
+	for key := range strings.SplitSeq(a.SortSchema, ",") {
+		if va, vb := a.Labels[key], b.Labels[key]; va != vb {
+			return strings.Compare(va, vb)
+		}
 	}
-
-	// Sort rows by label values in sort schema order, then by MinTimestamp,
-	// then by MaxTimestamp as a final tie-breaker.
-	// Get sort key order from the first row's SortSchema.
-	keys := strings.Split(b.rows[0].SortSchema, ",")
-	sort.SliceStable(b.rows, func(i, j int) bool {
-		ri, rj := b.rows[i], b.rows[j]
-		for _, key := range keys {
-			vi, vj := ri.Labels[key], rj.Labels[key]
-			if vi != vj {
-				return vi < vj
-			}
-		}
-		if ri.MinTimestamp != rj.MinTimestamp {
-			return ri.MinTimestamp < rj.MinTimestamp
-		}
-		return ri.MaxTimestamp < rj.MaxTimestamp
-	})
-
-	// Determine section splits based on targetSectionSize.
-	splits := b.computeSplits()
-
-	sections := make([]Section, 0, len(splits))
-	for _, chunk := range splits {
-		sec, err := b.encode(ctx, chunk)
-		if err != nil {
-			return nil, fmt.Errorf("encoding stats rows: %w", err)
-		}
-		sections = append(sections, sec)
+	if a.MinTimestamp != b.MinTimestamp {
+		return cmp.Compare(a.MinTimestamp, b.MinTimestamp)
 	}
-
-	b.Reset()
-	return sections, nil
+	if a.MaxTimestamp != b.MaxTimestamp {
+		return cmp.Compare(a.MaxTimestamp, b.MaxTimestamp)
+	}
+	if a.ObjectPath != b.ObjectPath {
+		return strings.Compare(a.ObjectPath, b.ObjectPath)
+	}
+	return cmp.Compare(a.SectionIndex, b.SectionIndex)
 }
 
-// computeSplits divides b.rows into chunks, each estimated to be at most
-// targetSectionSize bytes. Returns at least one chunk.
-func (b *Builder) computeSplits() [][]Stat {
+// Flush sorts the accumulated rows with [Compare], encodes them via the
+// [SectionEncoder], and writes the result to the provided
+// [dataobj.SectionWriter].
+//
+// After a successful flush, the builder is reset.
+func (b *Builder) Flush(w dataobj.SectionWriter) (n int64, err error) {
 	if len(b.rows) == 0 {
-		return nil
+		return 0, nil
 	}
 
-	var (
-		chunks     [][]Stat
-		chunkStart = 0
-		chunkSize  = 0
-	)
-
-	for i, r := range b.rows {
-		rowSize := 6*8 + len(r.ObjectPath) + len(r.SortSchema)
-		for k, v := range r.Labels {
-			rowSize += len(k) + len(v)
-		}
-		if chunkSize+rowSize > b.targetSectionSize && chunkSize > 0 {
-			chunks = append(chunks, b.rows[chunkStart:i])
-			chunkStart = i
-			chunkSize = 0
-		}
-		chunkSize += rowSize
+	if b.metrics != nil {
+		timer := prometheus.NewTimer(b.metrics.encodeSeconds)
+		defer timer.ObserveDuration()
 	}
 
-	// Append final chunk.
-	chunks = append(chunks, b.rows[chunkStart:])
-	return chunks
+	slices.SortStableFunc(b.rows, Compare)
+
+	var enc columnar.Encoder
+	defer enc.Reset()
+
+	if err := b.encode(b.rows, &enc); err != nil {
+		return 0, fmt.Errorf("encoding stats: %w", err)
+	}
+
+	enc.SetTenant(b.tenant)
+	n, err = enc.Flush(w)
+	if err == nil {
+		b.Reset()
+	}
+	return n, err
 }
