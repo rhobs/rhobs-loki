@@ -45,6 +45,10 @@ spec:
                 description: DebugOptions contains settings that are not present on
                   the upstream operator version.
                 properties:
+                  flushOnShutdown:
+                    description: FlushOnShutdown controls whether the ingester will
+                      flush all chunks to object storage before shutting down.
+                    type: boolean
                   grpcCompression:
                     description: |-
                       GRPCCompression can be used to enable compression on the gRPC links between the Loki components.
