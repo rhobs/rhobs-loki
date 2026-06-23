@@ -1260,6 +1260,9 @@ type DebugOptionsSpec struct {
 	//  - "snappy"
 	//
 	GRPCCompression string `json:"grpcCompression,omitempty"`
+
+	// FlushOnShutdown controls whether the ingester will flush all chunks to object storage before shutting down.
+	FlushOnShutdown bool `json:"flushOnShutdown,omitempty"`
 }
 
 type ReplicationSpec struct {

@@ -1177,6 +1177,17 @@ There are three valid values:</p>
 </ul>
 </td>
 </tr>
+<tr>
+<td>
+<code>flushOnShutdown</code><br/>
+<em>
+bool
+</em>
+</td>
+<td>
+<p>FlushOnShutdown controls whether the ingester will flush all chunks to object storage before shutting down.</p>
+</td>
+</tr>
 </tbody>
 </table>
 

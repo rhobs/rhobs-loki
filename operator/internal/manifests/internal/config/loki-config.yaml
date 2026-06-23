@@ -163,6 +163,9 @@ ingester:
   wal:
     enabled: true
     dir: {{ .WriteAheadLog.Directory }}
+{{- with .Stack.DebugOptions }}
+    flush_on_shutdown: {{ .FlushOnShutdown }}
+{{- end }}
     replay_memory_ceiling: {{ .WriteAheadLog.ReplayMemoryCeiling }}
 ingester_client:
   grpc_client_config:
