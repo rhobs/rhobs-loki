@@ -199,6 +199,38 @@ spec:
         path: debugOptions
         x-descriptors:
         - urn:alm:descriptor:com.tectonic.ui:advanced
+      - description: |-
+          ResourceOverrides allows overriding default resource requirements per component.
+          When specified, these overrides take precedence over the t-shirt size defaults for CPU and memory.
+          PVC storage sizes are not affected and remain as defined by the selected t-shirt size.
+        displayName: Component Resource Overrides
+        path: debugOptions.resourceOverrides
+        x-descriptors:
+        - urn:alm:descriptor:com.tectonic.ui:advanced
+      - description: Compactor defines the resource overrides for the compactor component.
+        displayName: Compactor Resources
+        path: debugOptions.resourceOverrides.compactor
+      - description: Distributor defines the resource overrides for the distributor
+          component.
+        displayName: Distributor Resources
+        path: debugOptions.resourceOverrides.distributor
+      - description: IndexGateway defines the resource overrides for the index gateway
+          component.
+        displayName: Index Gateway Resources
+        path: debugOptions.resourceOverrides.indexGateway
+      - description: Ingester defines the resource overrides for the ingester component.
+        displayName: Ingester Resources
+        path: debugOptions.resourceOverrides.ingester
+      - description: Querier defines the resource overrides for the querier component.
+        displayName: Querier Resources
+        path: debugOptions.resourceOverrides.querier
+      - description: QueryFrontend defines the resource overrides for the query frontend
+          component.
+        displayName: Query Frontend Resources
+        path: debugOptions.resourceOverrides.queryFrontend
+      - description: Ruler defines the resource overrides for the ruler component.
+        displayName: Ruler Resources
+        path: debugOptions.resourceOverrides.ruler
       - description: HashRing defines the spec for the distributed hash ring configuration.
         displayName: Hash Ring
         path: hashRing
