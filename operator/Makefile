@@ -2,6 +2,14 @@
 # referenced here as make variables. For example: $(GOLANGCI_LINT)
 include .bingo/Variables.mk
 
+# Platform-specific sed command (macOS requires backup extension, Linux doesn't)
+UNAME_S := $(shell uname -s)
+ifeq ($(UNAME_S),Darwin)
+    SED_I = sed -i ''
+else
+    SED_I = sed -i
+endif
+
 WEBSITE_DIR ?= website
 WEBSITE_BASE_URL ?= https://loki-operator.dev
 
@@ -328,19 +336,19 @@ oci-push-passthrough-gateway: ## Push the passthrough gateway image
 TYPES_TARGET := $(shell find api/loki -type f -iname "*_types.go")
 docs/operator/api.md: $(TYPES_TARGET) $(GEN_CRD_API_REFERENCE_DOCS)
 	$(GEN_CRD_API_REFERENCE_DOCS) -api-dir "github.com/grafana/loki/operator/api/loki/" -config "$(PWD)/config/docs/config.json" -template-dir "$(PWD)/config/docs/templates" -out-file "$(PWD)/$@"
-	sed -i 's/+docs:/  docs:/' $@
-	sed -i 's/+parent:/    parent:/' $@
-	sed -i 's/##/\n##/' $@
-	sed -i 's/+newline/\n/' $@
+	$(SED_I) 's/+docs:/  docs:/' $@
+	$(SED_I) 's/+parent:/    parent:/' $@
+	$(SED_I) 's/##/\n##/' $@
+	$(SED_I) 's/+newline/\n/' $@
 
 FEATURE_GATES_TARGET := $(shell find api/config -type f -iname "*_types.go")
 docs/operator/feature-gates.md: $(FEATURE_GATES_TARGET) $(GEN_CRD_API_REFERENCE_DOCS)
 	$(GEN_CRD_API_REFERENCE_DOCS) -api-dir "github.com/grafana/loki/operator/api/config/v1/" -config "$(PWD)/config/docs/config.json" -template-dir "$(PWD)/config/docs/templates" -out-file "$(PWD)/$@"
-	sed -i 's/title: "API"/title: "Feature Gates"/' $@
-	sed -i 's/+docs:/  docs:/' $@
-	sed -i 's/+parent:/    parent:/' $@
-	sed -i 's/##/\n##/' $@
-	sed -i 's/+newline/\n/' $@
+	$(SED_I) 's/title: "API"/title: "Feature Gates"/' $@
+	$(SED_I) 's/+docs:/  docs:/' $@
+	$(SED_I) 's/+parent:/    parent:/' $@
+	$(SED_I) 's/##/\n##/' $@
+	$(SED_I) 's/+newline/\n/' $@
 
 .PHONY: web-pre
 web-pre: docs/operator/api.md docs/operator/feature-gates.md ## Build the markdown API files of the loki-operator.dev website

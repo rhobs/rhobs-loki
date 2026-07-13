@@ -300,7 +300,9 @@ var resourceRequirementsTable = map[lokiv1.LokiStackSizeType]ComponentResources{
 }
 
 // ResourceRequirementsForSize returns the resource configuration for a specific LokiStack size.
-func ResourceRequirementsForSize(size lokiv1.LokiStackSizeType, useRequestsAsLimits bool) ComponentResources {
+// If debugOptions contains resource overrides, they will be applied on top of the base t-shirt size configuration.
+// Only CPU and memory resources are overridden; PVC storage sizes remain from the base t-shirt size.
+func ResourceRequirementsForSize(size lokiv1.LokiStackSizeType, useRequestsAsLimits bool, debugOptions *lokiv1.DebugOptionsSpec) ComponentResources {
 	resources := resourceRequirementsTable[size].DeepCopy()
 	if useRequestsAsLimits {
 		resources.IndexGateway.Limits = resources.IndexGateway.Requests.DeepCopy()
@@ -313,7 +315,56 @@ func ResourceRequirementsForSize(size lokiv1.LokiStackSizeType, useRequestsAsLim
 		resources.QueryFrontend.Limits = resources.QueryFrontend.Requests.DeepCopy()
 		resources.Gateway.Limits = resources.Gateway.Requests.DeepCopy()
 	}
+
+	// Apply resource overrides from debug options if specified
+	if debugOptions != nil && debugOptions.ResourceOverrides != nil {
+		resources = applyResourceOverrides(resources, debugOptions.ResourceOverrides)
+	}
+
 	return resources
+}
+
+// applyResourceOverrides applies per-component resource overrides on top of base resources.
+// Only CPU and memory are overridden; PVC storage sizes are preserved from the base configuration.
+func applyResourceOverrides(base ComponentResources, overrides *lokiv1.ComponentResourceOverrides) ComponentResources {
+	result := base.DeepCopy()
+
+	// Apply overrides for components with PVC storage (using our custom ResourceRequirements type)
+	// For these components, we only override the CPU/memory parts, preserving PVCSize
+	if overrides.IndexGateway != nil {
+		result.IndexGateway.Requests = overrides.IndexGateway.Requests.DeepCopy()
+		result.IndexGateway.Limits = overrides.IndexGateway.Limits.DeepCopy()
+		// PVCSize is preserved from base
+	}
+	if overrides.Ingester != nil {
+		result.Ingester.Requests = overrides.Ingester.Requests.DeepCopy()
+		result.Ingester.Limits = overrides.Ingester.Limits.DeepCopy()
+		// PVCSize is preserved from base
+	}
+	if overrides.Compactor != nil {
+		result.Compactor.Requests = overrides.Compactor.Requests.DeepCopy()
+		result.Compactor.Limits = overrides.Compactor.Limits.DeepCopy()
+		// PVCSize is preserved from base
+	}
+	if overrides.Ruler != nil {
+		result.Ruler.Requests = overrides.Ruler.Requests.DeepCopy()
+		result.Ruler.Limits = overrides.Ruler.Limits.DeepCopy()
+		// PVCSize is preserved from base
+	}
+
+	// Apply overrides for query and distributor components (using standard Kubernetes ResourceRequirements)
+	// These components don't have PVC storage, so we can directly replace the entire ResourceRequirements
+	if overrides.Querier != nil {
+		result.Querier = *overrides.Querier.DeepCopy()
+	}
+	if overrides.Distributor != nil {
+		result.Distributor = *overrides.Distributor.DeepCopy()
+	}
+	if overrides.QueryFrontend != nil {
+		result.QueryFrontend = *overrides.QueryFrontend.DeepCopy()
+	}
+
+	return result
 }
 
 // StackSizeTable defines the default configurations for each size
