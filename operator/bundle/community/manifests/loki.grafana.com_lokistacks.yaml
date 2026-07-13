@@ -77,6 +77,12 @@ spec:
                        - "gzip"
                        - "snappy"
                     type: string
+                  ingesterTerminationGracePeriodSeconds:
+                    description: |-
+                      IngesterTerminationGracePeriodSeconds is the Kubernetes termination grace period for ingester pods.
+                      This is the maximum time Kubernetes waits before sending SIGKILL to the ingester process.
+                    format: int64
+                    type: integer
                   resourceOverrides:
                     description: |-
                       ResourceOverrides allows overriding default resource requirements per component.
