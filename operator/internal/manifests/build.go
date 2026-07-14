@@ -153,7 +153,7 @@ func ApplyDefaultSettings(opts *Options) error {
 	if opts.Stack.Template != nil {
 		useRequestsAsLimits = opts.Stack.Template.UseRequestsAsLimits
 	}
-	opts.ResourceRequirements = internal.ResourceRequirementsForSize(opts.Stack.Size, useRequestsAsLimits)
+	opts.ResourceRequirements = internal.ResourceRequirementsForSize(opts.Stack.Size, useRequestsAsLimits, opts.Stack.DebugOptions)
 	opts.Stack = *spec
 
 	return nil

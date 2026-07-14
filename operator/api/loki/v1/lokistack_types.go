@@ -1155,6 +1155,13 @@ type LokiStackSpec struct {
 	// +operator-sdk:csv:customresourcedefinitions:type=spec,xDescriptors={"urn:alm:descriptor:com.tectonic.ui:select:Managed","urn:alm:descriptor:com.tectonic.ui:select:Unmanaged"},displayName="Management State"
 	ManagementState ManagementStateType `json:"managementState,omitempty"`
 
+	// DebugOptions contains settings that are not present on the upstream operator version.
+	//
+	// +optional
+	// +kubebuilder:validation:Optional
+	// +operator-sdk:csv:customresourcedefinitions:type=spec,xDescriptors="urn:alm:descriptor:com.tectonic.ui:advanced",displayName="Debug Options"
+	DebugOptions *DebugOptionsSpec `json:"debugOptions,omitempty"`
+
 	// Size defines one of the support Loki deployment scale out sizes.
 	//
 	// +required
@@ -1242,6 +1249,89 @@ type LokiStackSpec struct {
 	// +kubebuilder:validation:Optional
 	// +operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Network Policies"
 	NetworkPolicies *NetworkPoliciesSpec `json:"networkPolicies,omitempty"`
+}
+
+// ComponentResourceOverrides allows overriding CPU and memory resource requirements per component.
+// When specified, these overrides take precedence over t-shirt size defaults.
+// PVC storage sizes remain unchanged from the selected t-shirt size.
+type ComponentResourceOverrides struct {
+	// Distributor defines the resource overrides for the distributor component.
+	//
+	// +optional
+	// +kubebuilder:validation:Optional
+	// +operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Distributor Resources"
+	Distributor *corev1.ResourceRequirements `json:"distributor,omitempty"`
+
+	// Ingester defines the resource overrides for the ingester component.
+	//
+	// +optional
+	// +kubebuilder:validation:Optional
+	// +operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Ingester Resources"
+	Ingester *corev1.ResourceRequirements `json:"ingester,omitempty"`
+
+	// Querier defines the resource overrides for the querier component.
+	//
+	// +optional
+	// +kubebuilder:validation:Optional
+	// +operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Querier Resources"
+	Querier *corev1.ResourceRequirements `json:"querier,omitempty"`
+
+	// QueryFrontend defines the resource overrides for the query frontend component.
+	//
+	// +optional
+	// +kubebuilder:validation:Optional
+	// +operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Query Frontend Resources"
+	QueryFrontend *corev1.ResourceRequirements `json:"queryFrontend,omitempty"`
+
+	// Compactor defines the resource overrides for the compactor component.
+	//
+	// +optional
+	// +kubebuilder:validation:Optional
+	// +operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Compactor Resources"
+	Compactor *corev1.ResourceRequirements `json:"compactor,omitempty"`
+
+	// IndexGateway defines the resource overrides for the index gateway component.
+	//
+	// +optional
+	// +kubebuilder:validation:Optional
+	// +operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Index Gateway Resources"
+	IndexGateway *corev1.ResourceRequirements `json:"indexGateway,omitempty"`
+
+	// Ruler defines the resource overrides for the ruler component.
+	//
+	// +optional
+	// +kubebuilder:validation:Optional
+	// +operator-sdk:csv:customresourcedefinitions:type=spec,displayName="Ruler Resources"
+	Ruler *corev1.ResourceRequirements `json:"ruler,omitempty"`
+}
+
+type DebugOptionsSpec struct {
+	// GRPCCompression can be used to enable compression on the gRPC links between the Loki components.
+	// There are three valid values:
+	//
+	//  - "" (default) - no compression
+	//  - "gzip"
+	//  - "snappy"
+	//
+	GRPCCompression string `json:"grpcCompression,omitempty"`
+
+	// FlushOnShutdown controls whether the ingester will flush all chunks to object storage before shutting down.
+	FlushOnShutdown bool `json:"flushOnShutdown,omitempty"`
+
+	// ResourceOverrides allows overriding default resource requirements per component.
+	// When specified, these overrides take precedence over the t-shirt size defaults for CPU and memory.
+	// PVC storage sizes are not affected and remain as defined by the selected t-shirt size.
+	//
+	// +optional
+	// +kubebuilder:validation:Optional
+	// +operator-sdk:csv:customresourcedefinitions:type=spec,xDescriptors="urn:alm:descriptor:com.tectonic.ui:advanced",displayName="Component Resource Overrides"
+	ResourceOverrides *ComponentResourceOverrides `json:"resourceOverrides,omitempty"`
+
+	// IngesterTerminationGracePeriodSeconds is the Kubernetes termination grace period for ingester pods.
+	// This is the maximum time Kubernetes waits before sending SIGKILL to the ingester process.
+	//
+	// +optional
+	IngesterTerminationGracePeriodSeconds *int64 `json:"ingesterTerminationGracePeriodSeconds,omitempty"`
 }
 
 type ReplicationSpec struct {

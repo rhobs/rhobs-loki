@@ -181,6 +181,23 @@ suffix <code>-ca-bundle</code>, e.g. <code>lokistack-dev-ca-bundle</code> and th
 </tr>
 <tr>
 <td>
+<code>grpcCompression</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<p>GRPCCompression can be used to enable compression on the gRPC links between the Loki components.
+There are three valid values:</p>
+<ul>
+<li>&rdquo;&rdquo; (default) - no compression</li>
+<li>&ldquo;gzip&rdquo;</li>
+<li>&ldquo;snappy&rdquo;</li>
+</ul>
+</td>
+</tr>
+<tr>
+<td>
 <code>builtInCertManagement</code><br/>
 <em>
 <a href="#config-loki-grafana-com-v1-BuiltInCertManagement">

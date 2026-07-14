@@ -260,6 +260,28 @@ func TestServicesMatchLabels(t *testing.T) {
 	}
 }
 
+func TestNewDistributorHTTPService_HasTrafficDistribution(t *testing.T) {
+	t.Parallel()
+	opt := Options{
+		Name:      "test",
+		Namespace: "test",
+		Image:     "test",
+		Stack: lokiv1.LokiStackSpec{
+			Size: lokiv1.SizeOneXExtraSmall,
+			Template: &lokiv1.LokiTemplateSpec{
+				Distributor: &lokiv1.LokiComponentSpec{
+					Replicas: 1,
+				},
+			},
+		},
+		Timeouts: defaultTimeoutConfig,
+	}
+
+	svc := NewDistributorHTTPService(opt)
+	require.NotNil(t, svc.Spec.TrafficDistribution)
+	require.Equal(t, corev1.ServiceTrafficDistributionPreferClose, *svc.Spec.TrafficDistribution)
+}
+
 func TestServices_WithEncryption(t *testing.T) {
 	const (
 		stackName = "test"

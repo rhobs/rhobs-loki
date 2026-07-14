@@ -2813,3 +2813,98 @@ func TestBuild_ConfigAndRuntimeConfig_OTLPConfigGenerated(t *testing.T) {
 	require.YAMLEq(t, expCfg, string(cfg))
 	require.YAMLEq(t, expRCfg, string(rCfg))
 }
+
+func TestBuild_ConfigAndRuntimeConfig_DebugOptions(t *testing.T) {
+	expCfg, expRCfg := loadTestData(t, "with-debugoptions")
+	opts := Options{
+		Stack: lokiv1.LokiStackSpec{
+			DebugOptions: &lokiv1.DebugOptionsSpec{
+				FlushOnShutdown: true,
+			},
+			Replication: &lokiv1.ReplicationSpec{
+				Factor: 1,
+			},
+			Limits: &lokiv1.LimitsSpec{
+				Global: &lokiv1.LimitsTemplateSpec{
+					IngestionLimits: &lokiv1.IngestionLimitSpec{
+						IngestionRate:             4,
+						IngestionBurstSize:        6,
+						MaxLabelNameLength:        1024,
+						MaxLabelValueLength:       2048,
+						MaxLabelNamesPerSeries:    30,
+						MaxGlobalStreamsPerTenant: 0,
+						MaxLineSize:               256000,
+						PerStreamRateLimit:        5,
+						PerStreamRateLimitBurst:   15,
+						PerStreamDesiredRate:      3,
+					},
+					QueryLimits: &lokiv1.QueryLimitSpec{
+						MaxEntriesLimitPerQuery: 5000,
+						MaxChunksPerQuery:       2000000,
+						MaxQuerySeries:          500,
+						QueryTimeout:            "1m",
+						CardinalityLimit:        100000,
+						MaxVolumeSeries:         1000,
+					},
+				},
+			},
+		},
+		Namespace: "test-ns",
+		Name:      "test",
+		Compactor: Address{
+			FQDN: "loki-compactor-grpc-lokistack-dev.default.svc.cluster.local",
+			Port: 9095,
+		},
+		FrontendWorker: Address{
+			FQDN: "loki-query-frontend-grpc-lokistack-dev.default.svc.cluster.local",
+			Port: 9095,
+		},
+		GossipRing: GossipRing{
+			InstancePort:         9095,
+			BindPort:             7946,
+			MembersDiscoveryAddr: "loki-gossip-ring-lokistack-dev.default.svc.cluster.local",
+		},
+		Querier: Address{
+			Protocol: "http",
+			FQDN:     "loki-querier-http-lokistack-dev.default.svc.cluster.local",
+			Port:     3100,
+		},
+		IndexGateway: Address{
+			FQDN: "loki-index-gateway-grpc-lokistack-dev.default.svc.cluster.local",
+			Port: 9095,
+		},
+		StorageDirectory: "/tmp/loki",
+		MaxConcurrent: MaxConcurrent{
+			AvailableQuerierCPUCores: 2,
+		},
+		WriteAheadLog: WriteAheadLog{
+			Directory:             "/tmp/wal",
+			IngesterMemoryRequest: 0,
+		},
+		ObjectStorage: storage.Options{
+			SharedStore: lokiv1.ObjectStorageSecretS3,
+			S3: &storage.S3StorageConfig{
+				Endpoint:       "http://test.default.svc.cluster.local.:9000",
+				Region:         "us-east",
+				Buckets:        "loki",
+				ForcePathStyle: true,
+			},
+			Schemas: []lokiv1.ObjectStorageSchema{
+				{
+					Version:       lokiv1.ObjectStorageSchemaV11,
+					EffectiveDate: "2020-10-01",
+				},
+			},
+		},
+		Shippers: []string{"boltdb"},
+		HTTPTimeouts: HTTPTimeoutConfig{
+			IdleTimeout:  30 * time.Second,
+			ReadTimeout:  30 * time.Second,
+			WriteTimeout: 10 * time.Minute,
+		},
+	}
+	cfg, rCfg, err := Build(opts)
+	require.NoError(t, err)
+	require.YAMLEq(t, expCfg, string(cfg))
+	require.YAMLEq(t, expRCfg, string(rCfg))
+}

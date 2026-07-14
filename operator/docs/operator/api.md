@@ -1112,6 +1112,124 @@ string
 </tbody>
 </table>
 
+## ComponentResourceOverrides { #loki-grafana-com-v1-ComponentResourceOverrides }
+<p>
+(<em>Appears on:</em><a href="#loki-grafana-com-v1-DebugOptionsSpec">DebugOptionsSpec</a>)
+</p>
+<div>
+<p>ComponentResourceOverrides allows overriding CPU and memory resource requirements per component.
+When specified, these overrides take precedence over t-shirt size defaults.
+PVC storage sizes remain unchanged from the selected t-shirt size.</p>
+</div>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>distributor</code><br/>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.24/#resourcerequirements-v1-core">
+Kubernetes core/v1.ResourceRequirements
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Distributor defines the resource overrides for the distributor component.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>ingester</code><br/>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.24/#resourcerequirements-v1-core">
+Kubernetes core/v1.ResourceRequirements
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Ingester defines the resource overrides for the ingester component.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>querier</code><br/>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.24/#resourcerequirements-v1-core">
+Kubernetes core/v1.ResourceRequirements
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Querier defines the resource overrides for the querier component.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>queryFrontend</code><br/>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.24/#resourcerequirements-v1-core">
+Kubernetes core/v1.ResourceRequirements
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>QueryFrontend defines the resource overrides for the query frontend component.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>compactor</code><br/>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.24/#resourcerequirements-v1-core">
+Kubernetes core/v1.ResourceRequirements
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Compactor defines the resource overrides for the compactor component.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>indexGateway</code><br/>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.24/#resourcerequirements-v1-core">
+Kubernetes core/v1.ResourceRequirements
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>IndexGateway defines the resource overrides for the index gateway component.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>ruler</code><br/>
+<em>
+<a href="https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.24/#resourcerequirements-v1-core">
+Kubernetes core/v1.ResourceRequirements
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>Ruler defines the resource overrides for the ruler component.</p>
+</td>
+</tr>
+</tbody>
+</table>
+
 ## CredentialMode { #loki-grafana-com-v1-CredentialMode }
 (<code>string</code> alias)
 <p>
@@ -1144,6 +1262,80 @@ it is configured by the environment and the operator relies on the Cloud Credent
 a secret. This mode is only supported for certain object storage types in certain runtime environments.</p>
 </td>
 </tr></tbody>
+</table>
+
+## DebugOptionsSpec { #loki-grafana-com-v1-DebugOptionsSpec }
+<p>
+(<em>Appears on:</em><a href="#loki-grafana-com-v1-LokiStackSpec">LokiStackSpec</a>)
+</p>
+<div>
+</div>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>
+<code>grpcCompression</code><br/>
+<em>
+string
+</em>
+</td>
+<td>
+<p>GRPCCompression can be used to enable compression on the gRPC links between the Loki components.
+There are three valid values:</p>
+<ul>
+<li>&rdquo;&rdquo; (default) - no compression</li>
+<li>&ldquo;gzip&rdquo;</li>
+<li>&ldquo;snappy&rdquo;</li>
+</ul>
+</td>
+</tr>
+<tr>
+<td>
+<code>flushOnShutdown</code><br/>
+<em>
+bool
+</em>
+</td>
+<td>
+<p>FlushOnShutdown controls whether the ingester will flush all chunks to object storage before shutting down.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>resourceOverrides</code><br/>
+<em>
+<a href="#loki-grafana-com-v1-ComponentResourceOverrides">
+ComponentResourceOverrides
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>ResourceOverrides allows overriding default resource requirements per component.
+When specified, these overrides take precedence over the t-shirt size defaults for CPU and memory.
+PVC storage sizes are not affected and remain as defined by the selected t-shirt size.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>ingesterTerminationGracePeriodSeconds</code><br/>
+<em>
+int64
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>IngesterTerminationGracePeriodSeconds is the Kubernetes termination grace period for ingester pods.
+This is the maximum time Kubernetes waits before sending SIGKILL to the ingester process.</p>
+</td>
+</tr>
+</tbody>
 </table>
 
 ## GatewaySpec { #loki-grafana-com-v1-GatewaySpec }
@@ -2017,6 +2209,20 @@ ManagementStateType
 <em>(Optional)</em>
 <p>ManagementState defines if the CR should be managed by the operator or not.
 Default is managed.</p>
+</td>
+</tr>
+<tr>
+<td>
+<code>debugOptions</code><br/>
+<em>
+<a href="#loki-grafana-com-v1-DebugOptionsSpec">
+DebugOptionsSpec
+</a>
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>DebugOptions contains settings that are not present on the upstream operator version.</p>
 </td>
 </tr>
 <tr>

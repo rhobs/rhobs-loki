@@ -14,6 +14,7 @@ import (
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	lokiv1 "github.com/grafana/loki/operator/api/loki/v1"
 	"github.com/grafana/loki/operator/internal/manifests/internal/config"
 	"github.com/grafana/loki/operator/internal/manifests/storage"
 )
@@ -75,8 +76,9 @@ func NewIngesterStatefulSet(opts Options) *appsv1.StatefulSet {
 	l := ComponentLabels(LabelIngesterComponent, opts.Name)
 	a := commonAnnotations(opts)
 	podSpec := corev1.PodSpec{
-		ServiceAccountName: opts.Name,
-		Affinity:           configureAffinity(LabelIngesterComponent, opts.Name, opts.Gates.DefaultNodeAffinity, opts.Stack.Template.Ingester),
+		ServiceAccountName:            opts.Name,
+		TerminationGracePeriodSeconds: ingesterTerminationGracePeriod(opts.Stack.DebugOptions),
+		Affinity:                      configureAffinity(LabelIngesterComponent, opts.Name, opts.Gates.DefaultNodeAffinity, opts.Stack.Template.Ingester),
 		Volumes: []corev1.Volume{
 			{
 				Name: configVolumeName,
@@ -307,4 +309,11 @@ func newIngesterPodDisruptionBudget(opts Options) *policyv1.PodDisruptionBudget 
 			MaxUnavailable: ptr.To(intstr.FromInt32(1)),
 		},
 	}
+}
+
+func ingesterTerminationGracePeriod(debug *lokiv1.DebugOptionsSpec) *int64 {
+	if debug == nil || debug.IngesterTerminationGracePeriodSeconds == nil {
+		return nil
+	}
+	return debug.IngesterTerminationGracePeriodSeconds
 }

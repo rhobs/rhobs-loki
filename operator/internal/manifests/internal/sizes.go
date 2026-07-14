@@ -300,7 +300,9 @@ var resourceRequirementsTable = map[lokiv1.LokiStackSizeType]ComponentResources{
 }
 
 // ResourceRequirementsForSize returns the resource configuration for a specific LokiStack size.
-func ResourceRequirementsForSize(size lokiv1.LokiStackSizeType, useRequestsAsLimits bool) ComponentResources {
+// If debugOptions contains resource overrides, they will be applied on top of the base t-shirt size configuration.
+// Only CPU and memory resources are overridden; PVC storage sizes remain from the base t-shirt size.
+func ResourceRequirementsForSize(size lokiv1.LokiStackSizeType, useRequestsAsLimits bool, debugOptions *lokiv1.DebugOptionsSpec) ComponentResources {
 	resources := resourceRequirementsTable[size].DeepCopy()
 	if useRequestsAsLimits {
 		resources.IndexGateway.Limits = resources.IndexGateway.Requests.DeepCopy()
@@ -313,7 +315,70 @@ func ResourceRequirementsForSize(size lokiv1.LokiStackSizeType, useRequestsAsLim
 		resources.QueryFrontend.Limits = resources.QueryFrontend.Requests.DeepCopy()
 		resources.Gateway.Limits = resources.Gateway.Requests.DeepCopy()
 	}
+
+	// Apply resource overrides from debug options if specified
+	if debugOptions != nil && debugOptions.ResourceOverrides != nil {
+		resources = applyResourceOverrides(resources, debugOptions.ResourceOverrides)
+	}
+
 	return resources
+}
+
+// applyResourceOverrides applies per-component resource overrides on top of base resources.
+// Only the specific resource fields (requests/limits) that are provided in overrides are changed.
+// Unspecified fields preserve their t-shirt size values.
+func applyResourceOverrides(base ComponentResources, overrides *lokiv1.ComponentResourceOverrides) ComponentResources {
+	result := base.DeepCopy()
+
+	// Apply overrides for components with PVC storage (using our custom ResourceRequirements type)
+	// For these components, we selectively override only the specified requests/limits
+	if overrides.IndexGateway != nil {
+		applyResourceRequirementsOverride(&result.IndexGateway.Requests, &result.IndexGateway.Limits, overrides.IndexGateway)
+	}
+	if overrides.Ingester != nil {
+		applyResourceRequirementsOverride(&result.Ingester.Requests, &result.Ingester.Limits, overrides.Ingester)
+	}
+	if overrides.Compactor != nil {
+		applyResourceRequirementsOverride(&result.Compactor.Requests, &result.Compactor.Limits, overrides.Compactor)
+	}
+	if overrides.Ruler != nil {
+		applyResourceRequirementsOverride(&result.Ruler.Requests, &result.Ruler.Limits, overrides.Ruler)
+	}
+	if overrides.Querier != nil {
+		applyResourceRequirementsOverride(&result.Querier.Requests, &result.Querier.Limits, overrides.Querier)
+	}
+	if overrides.Distributor != nil {
+		applyResourceRequirementsOverride(&result.Distributor.Requests, &result.Distributor.Limits, overrides.Distributor)
+	}
+	if overrides.QueryFrontend != nil {
+		applyResourceRequirementsOverride(&result.QueryFrontend.Requests, &result.QueryFrontend.Limits, overrides.QueryFrontend)
+	}
+
+	return result
+}
+
+// applyResourceRequirementsOverride selectively applies resource overrides, preserving
+// existing values for any requests/limits not specified in the override.
+func applyResourceRequirementsOverride(baseRequests, baseLimits *corev1.ResourceList, override *corev1.ResourceRequirements) {
+	// Only override requests if they are specified in the override
+	if override.Requests != nil {
+		if *baseRequests == nil {
+			*baseRequests = make(corev1.ResourceList)
+		}
+		for resource, quantity := range override.Requests {
+			(*baseRequests)[resource] = quantity.DeepCopy()
+		}
+	}
+
+	// Only override limits if they are specified in the override
+	if override.Limits != nil {
+		if *baseLimits == nil {
+			*baseLimits = make(corev1.ResourceList)
+		}
+		for resource, quantity := range override.Limits {
+			(*baseLimits)[resource] = quantity.DeepCopy()
+		}
+	}
 }
 
 // StackSizeTable defines the default configurations for each size

@@ -122,9 +122,14 @@ func ConfigOptions(opt Options) config.Options {
 		}
 	}
 
+	featureGates := opt.Gates
+	if debug := opt.Stack.DebugOptions; debug != nil {
+		featureGates.GRPCCompression = debug.GRPCCompression
+	}
+
 	return config.Options{
 		Stack: opt.Stack,
-		Gates: opt.Gates,
+		Gates: featureGates,
 		TLS: config.TLSOptions{
 			Ciphers:       opt.TLSProfile.Ciphers,
 			MinTLSVersion: opt.TLSProfile.MinTLSVersion,

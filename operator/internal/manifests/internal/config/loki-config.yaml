@@ -138,6 +138,9 @@ frontend_worker:
     tls_cipher_suites: {{ .TLS.CipherSuitesString }}
     tls_min_version: {{ .TLS.MinTLSVersion }}
 {{- end }}
+{{- with .Gates.GRPCCompression }}
+    grpc_compression: {{ . }}
+{{- end }}
 ingester:
   chunk_block_size: 262144
   chunk_encoding: snappy
@@ -160,6 +163,9 @@ ingester:
   wal:
     enabled: true
     dir: {{ .WriteAheadLog.Directory }}
+{{- with .Stack.DebugOptions }}
+    flush_on_shutdown: {{ .FlushOnShutdown }}
+{{- end }}
     replay_memory_ceiling: {{ .WriteAheadLog.ReplayMemoryCeiling }}
 ingester_client:
   grpc_client_config:
@@ -172,6 +178,9 @@ ingester_client:
     tls_server_name: {{ .TLS.ServerNames.GRPC.Ingester }}
     tls_cipher_suites: {{ .TLS.CipherSuitesString }}
     tls_min_version: {{ .TLS.MinTLSVersion }}
+{{- end }}
+{{- with .Gates.GRPCCompression }}
+    grpc_compression: {{ . }}
 {{- end }}
   remote_timeout: 5s
 # NOTE: Keep the order of keys as in Loki docs
@@ -306,8 +315,9 @@ querier:
   query_ingesters_within: 3h
   tail_max_duration: 1h
   max_concurrent: {{ .MaxConcurrent.AvailableQuerierCPUCores }}
-{{- if .Gates.GRPCEncryption }}
+{{- if or .Gates.GRPCCompression .Gates.GRPCEncryption}}
 compactor_grpc_client:
+{{- if .Gates.GRPCEncryption }}
   tls_enabled: true
   tls_cert_path: {{ .TLS.Paths.GRPC.Certificate }}
   tls_key_path: {{ .TLS.Paths.GRPC.Key }}
@@ -315,6 +325,10 @@ compactor_grpc_client:
   tls_server_name: {{ .TLS.ServerNames.GRPC.Compactor }}
   tls_cipher_suites: {{ .TLS.CipherSuitesString }}
   tls_min_version: {{ .TLS.MinTLSVersion }}
+{{- end }}
+{{- with .Gates.GRPCCompression }}
+  grpc_compression: {{ . }}
+{{- end }}
 {{- end }}
 query_range:
   align_queries_with_step: true
@@ -543,8 +557,9 @@ ruler:
   ring:
     kvstore:
       store: memberlist
-{{- if .Gates.GRPCEncryption }}
+{{- if or .Gates.GRPCCompression .Gates.GRPCEncryption }}
   ruler_client:
+{{- if .Gates.GRPCEncryption }}
     tls_enabled: true
     tls_cert_path: {{ .TLS.Paths.GRPC.Certificate }}
     tls_key_path: {{ .TLS.Paths.GRPC.Key }}
@@ -552,6 +567,10 @@ ruler:
     tls_server_name: {{ .TLS.ServerNames.GRPC.Ruler }}
     tls_cipher_suites: {{ .TLS.CipherSuitesString }}
     tls_min_version: {{ .TLS.MinTLSVersion }}
+{{- end }}
+{{- with .Gates.GRPCCompression }}
+    grpc_compression: {{ . }}
+{{- end }}
 {{- end }}
 {{ end }}
 {{- if .Gates.HTTPEncryption }}
@@ -611,8 +630,9 @@ storage_config:
     resync_interval: 5m
     index_gateway_client:
       server_address: dns:///{{ $.IndexGateway.FQDN }}:{{ $.IndexGateway.Port }}
-{{- if $.Gates.GRPCEncryption }}
+{{- if or $.Gates.GRPCCompression $.Gates.GRPCEncryption }}
       grpc_client_config:
+{{- if $.Gates.GRPCEncryption }}
         tls_enabled: true
         tls_cert_path: {{ $.TLS.Paths.GRPC.Certificate }}
         tls_key_path: {{ $.TLS.Paths.GRPC.Key }}
@@ -620,6 +640,10 @@ storage_config:
         tls_server_name: {{ $.TLS.ServerNames.GRPC.IndexGateway }}
         tls_cipher_suites: {{ $.TLS.CipherSuitesString }}
         tls_min_version: {{ $.TLS.MinTLSVersion }}
+{{- end }}
+{{- with $.Gates.GRPCCompression }}
+        grpc_compression: {{ . }}
+{{- end }}
 {{- end }}
 {{- end }}
 tracing:
