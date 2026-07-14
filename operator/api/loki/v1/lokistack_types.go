@@ -1326,6 +1326,12 @@ type DebugOptionsSpec struct {
 	// +kubebuilder:validation:Optional
 	// +operator-sdk:csv:customresourcedefinitions:type=spec,xDescriptors="urn:alm:descriptor:com.tectonic.ui:advanced",displayName="Component Resource Overrides"
 	ResourceOverrides *ComponentResourceOverrides `json:"resourceOverrides,omitempty"`
+
+	// IngesterTerminationGracePeriodSeconds is the Kubernetes termination grace period for ingester pods.
+	// This is the maximum time Kubernetes waits before sending SIGKILL to the ingester process.
+	//
+	// +optional
+	IngesterTerminationGracePeriodSeconds *int64 `json:"ingesterTerminationGracePeriodSeconds,omitempty"`
 }
 
 type ReplicationSpec struct {

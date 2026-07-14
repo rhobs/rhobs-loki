@@ -1322,6 +1322,19 @@ When specified, these overrides take precedence over the t-shirt size defaults f
 PVC storage sizes are not affected and remain as defined by the selected t-shirt size.</p>
 </td>
 </tr>
+<tr>
+<td>
+<code>ingesterTerminationGracePeriodSeconds</code><br/>
+<em>
+int64
+</em>
+</td>
+<td>
+<em>(Optional)</em>
+<p>IngesterTerminationGracePeriodSeconds is the Kubernetes termination grace period for ingester pods.
+This is the maximum time Kubernetes waits before sending SIGKILL to the ingester process.</p>
+</td>
+</tr>
 </tbody>
 </table>
 
