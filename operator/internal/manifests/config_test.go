@@ -1,7 +1,9 @@
 package manifests
 
 import (
+	"crypto/sha1"
 	"encoding/json"
+	"fmt"
 	"math/rand"
 	"testing"
 	"time"
@@ -23,6 +25,39 @@ func TestConfigMap_ReturnsSHA1OfBinaryContents(t *testing.T) {
 	_, sha1C, err := LokiConfigMap(opts)
 	require.NoError(t, err)
 	require.NotEmpty(t, sha1C)
+}
+
+func TestConfigMap_ConfigHashIgnoresRuntimeConfigChanges(t *testing.T) {
+	baseOpts := randomConfigOptions()
+	baseOpts.Stack.Limits.Tenants = nil
+
+	_, baseHash, err := LokiConfigMap(baseOpts)
+	require.NoError(t, err)
+
+	tenantOpts := baseOpts
+	tenantOpts.Stack.Limits.Tenants = map[string]lokiv1.PerTenantLimitsTemplateSpec{
+		"test-tenant": {
+			IngestionLimits: &lokiv1.IngestionLimitSpec{
+				IngestionRate:      99,
+				IngestionBurstSize: 199,
+			},
+		},
+	}
+
+	_, tenantHash, err := LokiConfigMap(tenantOpts)
+	require.NoError(t, err)
+	require.Equal(t, baseHash, tenantHash, "runtime config changes must not affect the pod rollout config hash")
+
+	cfgOpts := ConfigOptions(tenantOpts)
+	cfg, rc, err := config.Build(cfgOpts)
+	require.NoError(t, err)
+	require.NotEmpty(t, rc)
+	require.NotContains(t, string(cfg), "ingestion_rate_mb: 99")
+
+	s := sha1.New()
+	_, err = s.Write(cfg)
+	require.NoError(t, err)
+	require.Equal(t, fmt.Sprintf("%x", s.Sum(nil)), tenantHash)
 }
 
 func TestConfigOptions_UserOptionsTakePrecedence(t *testing.T) {
