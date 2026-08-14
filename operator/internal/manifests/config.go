@@ -27,12 +27,11 @@ func LokiConfigMap(opt Options) (*corev1.ConfigMap, string, error) {
 		return nil, "", err
 	}
 
+	// Hash only the static config file. Runtime config (limits overrides, retention,
+	// ruler alertmanager config, etc.) is hot-reloaded by Loki via -runtime-config.file
+	// and must not trigger a rolling restart of stateful components like ingesters.
 	s := sha1.New()
 	_, err = s.Write(c)
-	if err != nil {
-		return nil, "", err
-	}
-	_, err = s.Write(rc)
 	if err != nil {
 		return nil, "", err
 	}
